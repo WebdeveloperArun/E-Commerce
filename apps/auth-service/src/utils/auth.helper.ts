@@ -15,7 +15,8 @@ export const validateRegistrationData = (
   if (
     !name ||
     !email ||
-    !password(userType === "seller" && (!phone_number || !country))
+    !password ||
+    (userType === "seller" && (!phone_number || !country))
   ) {
     throw new ValidationError("Missing required fields!");
   }

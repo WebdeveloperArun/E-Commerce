@@ -5,8 +5,8 @@ import {
   trackOtpRequests,
   validateRegistrationData,
 } from "../utils/auth.helper";
-import prisma from "../../../../packages/libs/prisma";
-import { ValidationError } from "../../../../packages/error-handler";
+import prisma from "@packages/libs/prisma";
+import { ValidationError } from "@packages/error-handler";
 
 // Register a new user
 export const userRegistration = async (
@@ -18,7 +18,7 @@ export const userRegistration = async (
      validateRegistrationData(req.body, "user");
      const { name, email } = req.body;
 
-     const existingUser = await prisma.users.findUnique({ where: email });
+     const existingUser = await prisma.users.findUnique({ where: {email} });
 
      if (existingUser) {
        return next(new ValidationError("User Already exists with this email!"));
