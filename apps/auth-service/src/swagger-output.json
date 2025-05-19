@@ -22,13 +22,46 @@
               "type": "object",
               "properties": {
                 "name": {
-                  "example": "webdeveloper"
+                  "example": "Arun Kumar"
                 },
                 "email": {
-                  "example": "forwebdeveloper0@gmail.com"
+                  "example": "arunkumar62841203@gmail.com"
                 },
                 "password": {
-                  "example": "12345678"
+                  "example": "hallo11"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/verify-user": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "example": "arunkumar62841203@gmail.com"
+                },
+                "otp": {
+                  "example": "any"
+                },
+                "password": {
+                  "example": "hallo11"
+                },
+                "name": {
+                  "example": "Arun Kumar"
                 }
               }
             }
