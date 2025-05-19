@@ -22,13 +22,10 @@
               "type": "object",
               "properties": {
                 "name": {
-                  "example": "Arun Kumar"
+                  "example": "any"
                 },
                 "email": {
-                  "example": "arunkumar62841203@gmail.com"
-                },
-                "password": {
-                  "example": "hallo11"
+                  "example": "any"
                 }
               }
             }
@@ -52,16 +49,43 @@
               "type": "object",
               "properties": {
                 "email": {
-                  "example": "arunkumar62841203@gmail.com"
+                  "example": "any"
                 },
                 "otp": {
                   "example": "any"
                 },
                 "password": {
-                  "example": "hallo11"
+                  "example": "any"
                 },
                 "name": {
-                  "example": "Arun Kumar"
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/login-user": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "example": "arunkumar62841203@gmail.com"
+                },
+                "password": {
+                  "example": "hallo11"
                 }
               }
             }
