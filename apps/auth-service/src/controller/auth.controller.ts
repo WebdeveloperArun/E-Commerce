@@ -1,9 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import {
   checkOtpRestrictions,
+  handleForgotPassword,
   sendOtp,
   trackOtpRequests,
   validateRegistrationData,
+  varifyForgotPasswordOtp,
   verifyOtp,
 } from "../utils/auth.helper";
 import prisma from "@packages/libs/prisma";
@@ -105,27 +107,89 @@ export const loginUser = async (
     }
 
     // generate access and varification token
-    const accessToken = jwt.sign({ id: user.id, role: "user" }, process.env.ACCESS_TOKEN_SECRET as string, {
-      expiresIn: "15m",
-    });
-    const refreshToken = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET as string, {
-      expiresIn: "7d",
-    });
+    const accessToken = jwt.sign(
+      { id: user.id, role: "user" },
+      process.env.ACCESS_TOKEN_SECRET as string,
+      {
+        expiresIn: "15m",
+      }
+    );
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      process.env.REFRESH_TOKEN_SECRET as string,
+      {
+        expiresIn: "7d",
+      }
+    );
 
     // store the refresh and access token in an httpOnly secure cookie
     setCookie(res, "refresh_token", refreshToken);
     setCookie(res, "access_token", accessToken);
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: "User logged in successfully.",
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
-      }
-     });
-    
+        email: user.email,
+      },
+    });
   } catch (error) {
     return next(error);
+  }
+};
+
+// User Forgot Password
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  await handleForgotPassword(req, res, next, "user");
+};
+
+// Verify user forgot password
+export const verifyForgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  await varifyForgotPasswordOtp(req, res, next);
+};
+
+// Reset user Password
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return next(new ValidationError("Email and password are required!"));
+    }
+
+    const user = await prisma.users.findUnique({ where: { email } });
+
+    if (!user) return next(new ValidationError("User not found!"));
+
+    const samePassword = await bcrypt.compare(newPassword, user.password!);
+
+    if (samePassword)
+      return next(
+        new ValidationError("New password cannot be same as the old password!")
+      );
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.users.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+
+    res.status(200).json({ message: "Password updated Successfully!" });
+  } catch (error) {
+    next(error);
   }
 };
