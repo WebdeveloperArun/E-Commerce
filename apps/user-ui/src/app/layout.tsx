@@ -1,7 +1,7 @@
 import "./global.css";
 import Header from "../shared/widgets/header";
 import { Roboto, Poppins } from "next/font/google";
-import Providers from "./Providers";
+import Providers from "./providers";
 
 const roboto = Roboto({
   weight: ["100", "300", "400", "500", "700", "900"],
