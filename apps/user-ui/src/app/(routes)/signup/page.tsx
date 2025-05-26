@@ -1,7 +1,7 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
 import GoogleButton from "apps/user-ui/src/shared/components/google-button";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,6 @@ type FormData = {
 
 const Signup = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
   const [showOtp, setShowOtp] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [timer, setTimer] = useState(60);
@@ -62,8 +61,25 @@ const Signup = () => {
     },
   });
 
+  const verifyOtpMutation = useMutation({
+    mutationFn: async () => {
+      if (!userData) return;
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URI}/api/verify-user`,
+        {
+          ...userData,
+          otp: otp.join(""),
+        }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      router.push("/login");
+    },
+  });
+
   const onSubmit = (data: FormData) => {
-    signupMutation.mutate(data)
+    signupMutation.mutate(data);
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -179,15 +195,12 @@ const Signup = () => {
               </div>
 
               <button
+                disabled={signupMutation.isPending}
                 type="submit"
                 className=" w-full text-lg mt-4 cursor-pointer bg-black text-white py-2 rounded-lg "
               >
-                Signup
+                {signupMutation.isPending ? "Signing up..." : "Signup"}
               </button>
-
-              {serverError && (
-                <p className="text-red-500 text-sm mt-2">{serverError}</p>
-              )}
             </form>
           ) : (
             <div>
@@ -210,8 +223,12 @@ const Signup = () => {
                   />
                 ))}
               </div>
-              <button className="w-full mt-4 text-lg cursor-pointer bg-blue-500 text-white py-2 rounded-lg">
-                Verify OTP
+              <button
+                disabled={verifyOtpMutation.isPending}
+                onClick={() => verifyOtpMutation.mutate()}
+                className="w-full mt-4 text-lg cursor-pointer bg-blue-500 text-white py-2 rounded-lg"
+              >
+                {verifyOtpMutation.isPending ? "Verifying..." : "Verify OTP"}
               </button>
               <p className="text-center text-sm mt-4">
                 {canResend ? (
@@ -225,6 +242,13 @@ const Signup = () => {
                   `Resend OTP in ${timer}s`
                 )}
               </p>
+              {verifyOtpMutation?.isError &&
+                verifyOtpMutation.error instanceof AxiosError && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {verifyOtpMutation.error.response?.data?.message ||
+                      verifyOtpMutation.error.message}
+                  </p>
+                )}
             </div>
           )}
         </div>
