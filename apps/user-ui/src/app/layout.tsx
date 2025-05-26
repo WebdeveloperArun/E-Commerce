@@ -1,6 +1,7 @@
 import "./global.css";
 import Header from "../shared/widgets/header";
 import { Roboto, Poppins } from "next/font/google";
+import Providers from "./Providers";
 
 const roboto = Roboto({
   weight: ["100", "300", "400", "500", "700", "900"],
@@ -27,8 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${roboto.variable} ${poppins.variable} font-Poppins`}>
-        <Header />
-        {children}
+        <Providers>
+          <Header />
+          {children}
+        </Providers>
       </body>
     </html>
   );

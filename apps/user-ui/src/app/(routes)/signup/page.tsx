@@ -3,7 +3,7 @@ import GoogleButton from "@/shared/components/google-button";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 type FormData = {
@@ -11,17 +11,17 @@ type FormData = {
   email: string;
   password: string;
 };
-/**
- * Signup component.
- *
- * This component displays a form to register a new user account.
- *
- * @returns A JSX element representing the signup form.
- */
+
 const Signup = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showOtp, setShowOtp] = useState(true);
+  const [canResend, setCanResend] = useState(true);
+  const [timer, setTimer] = useState(60);
+  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [userData, setUserData] = useState<FormData | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const router = useRouter();
 
   const {
@@ -31,6 +31,29 @@ const Signup = () => {
   } = useForm<FormData>();
 
   const onSubmit = (data: FormData) => {};
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^[0-9]?$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    if (value && index < inputRefs.current.length - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key == "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const resendOtp = () => {};
 
   return (
     <div className="w-full py-10 min-h-[85vh] bg-[#f1f1f1] ">
@@ -60,77 +83,116 @@ const Signup = () => {
             <div className="flex-1 border-t border-gray-300 " />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <label className="text-gray-700 mb-1 block">Name</label>
-            <input
-              type="text"
-              placeholder="John doe"
-              className="w-full p-2 border border-gray-300 outline-0 !rounded mb-1"
-              {...register("name", {
-                required: "Name is required",
-              })}
-            />
-
-            <label className="text-gray-700 mb-1 block">Email</label>
-            <input
-              type="email"
-              placeholder="support@gmail.com"
-              className="w-full p-2 border border-gray-300 outline-0 !rounded mb-1"
-              {...register("email", {
-                required: "Email is required",
-                pattern: {
-                  value:
-                    /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/,
-                  message: "Invalid email address",
-                },
-              })}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm">
-                {String(errors.email.message)}
-              </p>
-            )}
-
-            <label className="text-gray-700 mb-1 block">Password</label>
-            <div className="relative">
+          {!showOtp ? (
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <label className="text-gray-700 mb-1 block">Name</label>
               <input
-                type={passwordVisible ? "text" : "password"}
-                placeholder="Min. 6 characters"
+                type="text"
+                placeholder="John doe"
                 className="w-full p-2 border border-gray-300 outline-0 !rounded mb-1"
-                {...register("password", {
-                  required: "password is required",
-                  minLength: {
-                    value: 6,
-                    message: "Password must be at least 6 characters",
-                  },
+                {...register("name", {
+                  required: "Name is required",
                 })}
               />
 
-              <button
-                type="button"
-                onClick={() => setPasswordVisible(!passwordVisible)}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-400 "
-              >
-                {passwordVisible ? <Eye /> : <EyeOff />}
-              </button>
-              {errors.password && (
+              <label className="text-gray-700 mb-1 block">Email</label>
+              <input
+                type="email"
+                placeholder="support@gmail.com"
+                className="w-full p-2 border border-gray-300 outline-0 !rounded mb-1"
+                {...register("email", {
+                  required: "Email is required",
+                  pattern: {
+                    value:
+                      /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/,
+                    message: "Invalid email address",
+                  },
+                })}
+              />
+              {errors.email && (
                 <p className="text-red-500 text-sm">
-                  {String(errors.password.message)}
+                  {String(errors.email.message)}
                 </p>
               )}
+
+              <label className="text-gray-700 mb-1 block">Password</label>
+              <div className="relative">
+                <input
+                  type={passwordVisible ? "text" : "password"}
+                  placeholder="Min. 6 characters"
+                  className="w-full p-2 border border-gray-300 outline-0 !rounded mb-1"
+                  {...register("password", {
+                    required: "password is required",
+                    minLength: {
+                      value: 6,
+                      message: "Password must be at least 6 characters",
+                    },
+                  })}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setPasswordVisible(!passwordVisible)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 "
+                >
+                  {passwordVisible ? <Eye /> : <EyeOff />}
+                </button>
+                {errors.password && (
+                  <p className="text-red-500 text-sm">
+                    {String(errors.password.message)}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className=" w-full text-lg mt-4 cursor-pointer bg-black text-white py-2 rounded-lg "
+              >
+                Signup
+              </button>
+
+              {serverError && (
+                <p className="text-red-500 text-sm mt-2">{serverError}</p>
+              )}
+            </form>
+          ) : (
+            <div>
+              <h3 className="text-xl font-semibold text-center mb-4">
+                Enter OTP
+              </h3>
+              <div className="flex justify-center gap-6">
+                {otp?.map((digit, index) => (
+                  <input
+                    type="text"
+                    key={index}
+                    ref={(el) => {
+                      if (el) inputRefs.current[index] = el;
+                    }}
+                    maxLength={1}
+                    className="w-12 h-12 text-center border border-gray-300 outline-none !rounded "
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                  />
+                ))}
+              </div>
+              <button className="w-full mt-4 text-lg cursor-pointer bg-blue-500 text-white py-2 rounded-lg">
+                Verify OTP
+              </button>
+              <p className="text-center text-sm mt-4">
+                {canResend ? (
+                  <button
+                    onClick={resendOtp}
+                    className="cursor-pointer text-blue-500"
+                  >
+                    Resend OTP
+                  </button>
+                ) : (
+                  `Resend OTP in ${timer}s`
+                )}
+              </p>
             </div>
-
-            <button
-              type="submit"
-              className=" w-full text-lg mt-4 cursor-pointer bg-black text-white py-2 rounded-lg "
-            >
-              Signup
-            </button>
-
-            {serverError && (
-              <p className="text-red-500 text-sm mt-2">{serverError}</p>
-            )}
-          </form>
+          )}
         </div>
       </div>
     </div>
