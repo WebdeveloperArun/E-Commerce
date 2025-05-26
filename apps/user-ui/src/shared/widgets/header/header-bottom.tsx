@@ -1,7 +1,7 @@
 "use client";
-import CartIcon from "@/assets/svgs/cart-icon";
-import ProfileIcon from "@/assets/svgs/profile-icon";
-import { NavItems } from "@/configs/constants";
+import CartIcon from "../../../assets/svgs/cart-icon";
+import ProfileIcon from "../../../assets/svgs/profile-icon";
+import { NavItems } from "../../../configs/constants";
 import { AlignLeft, ChevronDown, HeartIcon } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";

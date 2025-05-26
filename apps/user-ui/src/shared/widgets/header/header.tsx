@@ -1,6 +1,6 @@
-import CartIcon from "@/assets/svgs/cart-icon";
-import HeartIcon from "@/assets/svgs/heart-icon";
-import ProfileIcon from "@/assets/svgs/profile-icon";
+import CartIcon from "../../../assets/svgs/cart-icon";
+import HeartIcon from "../../../assets/svgs/heart-icon";
+import ProfileIcon from "../../../assets/svgs/profile-icon";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import React from "react";
