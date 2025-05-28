@@ -1,6 +1,4 @@
 import axios from "axios";
-import { on } from "events";
-import { response } from "express";
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_SERVER_URI,
@@ -72,3 +70,5 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export default axiosInstance;

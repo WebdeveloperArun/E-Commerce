@@ -1,4 +1,5 @@
 "use client";
+import useUser from "apps/user-ui/src/hooks/useUser";
 import CartIcon from "../../../assets/svgs/cart-icon";
 import ProfileIcon from "../../../assets/svgs/profile-icon";
 import { NavItems } from "../../../configs/constants";
@@ -9,6 +10,9 @@ import React, { useEffect, useState } from "react";
 const HeaderBottom = () => {
   const [show, setShow] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
+  const { user } = useUser();
+
+  console.log("userData", user);
 
   // Track scroll position
   useEffect(() => {
