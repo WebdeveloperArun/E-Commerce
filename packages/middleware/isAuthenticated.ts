@@ -2,6 +2,7 @@ import prisma from "@packages/libs/prisma";
 import jwt from "jsonwebtoken";
 
 const isAuthenticated = async (req: any, res: any, next: any) => {
+  
   try {
     const token =
       req.cookies.access_token || req.headers.authorization?.split(" ")[1];

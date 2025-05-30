@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "npx nx run-many --target=serve --all",
     "auth-docs": "node apps/auth-service/src/swagger.js",
-    "user-ui": "npx nx run-many --target=dev --all --projects=user-ui"
+    "user-ui": "npx nx run-many --target=dev --all --projects=user-ui",
+    "seller-ui": "npx nx run-many --target=dev --all --projects=seller-ui"
   },
   "private": true,
   "dependencies": {
@@ -26,7 +27,10 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.511.0",
     "morgan": "^1.10.0",
+    "next": "~15.2.4",
     "nodemailer": "^7.0.3",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-hook-form": "^7.56.4",
     "react-hot-toast": "^2.5.2",
     "swagger-autogen": "^2.23.7",

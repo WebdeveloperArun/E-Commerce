@@ -10,9 +10,10 @@ import React, { useEffect, useState } from "react";
 const HeaderBottom = () => {
   const [show, setShow] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
 
-  console.log("userData", user);
+  console.log(user);
+  
 
   // Track scroll position
   useEffect(() => {
@@ -76,18 +77,39 @@ const HeaderBottom = () => {
           ))}
         </div>
         {isSticky && (
-          <div className="flex items-center gap-8 pb-2">
+          <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
-              <Link
-                href={"/login"}
-                className="border-2 w-[50px] h-[50px] flex items-center justify-center rounded-full border-[#010f1c1a] "
-              >
-                <ProfileIcon />
-              </Link>
-              <Link href={"/login"}>
-                <span className="block font-medium">Hallo,</span>
-                <span className="font-semibold">Sign In</span>
-              </Link>
+              {!isLoading && user ? (
+                <>
+                  <Link
+                    href={"/profile"}
+                    className="border-2 w-[50px] h-[50px] flex items-center justify-center rounded-full border-[#010f1c1a] "
+                  >
+                    <ProfileIcon />
+                  </Link>
+                  <Link href={"/profile"}>
+                    <span className="block font-medium">Hallo,</span>
+                    <span className="font-semibold">
+                      {user?.name?.split(" ")[0]}
+                    </span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={"/login"}
+                    className="border-2 w-[50px] h-[50px] flex items-center justify-center rounded-full border-[#010f1c1a] "
+                  >
+                    <ProfileIcon />
+                  </Link>
+                  <Link href={"/login"}>
+                    <span className="block font-medium">Hallo,</span>
+                    <span className="font-semibold">
+                      {isLoading ? "..." : "Sign In"}
+                    </span>
+                  </Link>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-5">
               <Link href={"/wishlist"} className="relative">
