@@ -1,6 +1,5 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
-import GoogleButton from "apps/user-ui/src/shared/components/google-button";
 import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
@@ -50,7 +49,7 @@ const Login = () => {
   };
 
   return (
-    <div className="w-full py-10 min-h-[85vh] bg-[#f1f1f1] ">
+    <div className="w-full py-10 min-h-screen bg-[#f1f1f1] ">
       <h1 className="text-4xl font-Poppins font-semibold text-black text-center">
         Login
       </h1>
@@ -70,7 +69,6 @@ const Login = () => {
             </Link>
           </p>
 
-          <GoogleButton />
           <div className="flex items-center my-5 text-gray-400 text-sm ">
             <div className="flex-1 border-t border-gray-300 " />
             <span className="px-3"> or Sign in with Email</span>
