@@ -247,3 +247,115 @@ export const resetPassword = async (
     next(error);
   }
 };
+
+// Register a new Seller
+export const registerSeller = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    validateRegistrationData(req.body, "seller");
+    const { name, email } = req.body;
+
+    const existingSeller = await prisma.sellers.findUnique({
+      where: { email },
+    });
+
+    if (existingSeller) {
+      return next(
+        new ValidationError("Seller Already exists with this email!")
+      );
+    }
+
+    await checkOtpRestrictions(email, next);
+    await trackOtpRequests(email, next);
+    await sendOtp(name, email, "seller-activation-mail");
+
+    res
+      .status(200)
+      .send({ message: "Otp sent to email. Please varify your account." });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// Verify seller
+export const verifySeller = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email, otp, password, name, phone_number, country } = req.body;
+
+    if (!email || !otp || !password || !name || !phone_number || !country) {
+      return next(new ValidationError("All fields are required!"));
+    }
+
+    const existingSeller = await prisma.users.findUnique({ where: { email } });
+
+    if (existingSeller) {
+      return next(
+        new ValidationError("Seller Already exists with this email!")
+      );
+    }
+
+    await verifyOtp(email, otp, next);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await prisma.sellers.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        country,
+        phone_number,
+      },
+    });
+
+    res
+      .status(201)
+      .json({ success: true, message: "Seller registered successfully." });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// Create a new shop
+export const createShop = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {name, bio, category, address, opening_hours, website, sellerId} = req.body;
+
+    if (!name || !bio || !category || !address || !opening_hours || !sellerId) {
+      return next(new ValidationError("All fields are required!"));
+    }
+
+    const shopData: any = {
+      name,
+      bio,
+      category,
+      address,
+      opening_hours,
+      sellerId,
+    };
+
+    if (website && website.trim() !== "") {
+      shopData.website = website;
+    }
+
+    const shop = await prisma.shops.create({
+      data: shopData,
+    });
+
+    res.status(201).json({ success: true, shop });
+
+  } catch (error) {
+    return next(error);
+  }
+};
