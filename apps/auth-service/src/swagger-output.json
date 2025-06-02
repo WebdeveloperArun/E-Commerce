@@ -164,6 +164,114 @@
           }
         }
       }
+    },
+    "/seller-registration": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "example": "any"
+                },
+                "email": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/verify-seller": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "example": "any"
+                },
+                "otp": {
+                  "example": "any"
+                },
+                "password": {
+                  "example": "any"
+                },
+                "name": {
+                  "example": "any"
+                },
+                "phone_number": {
+                  "example": "any"
+                },
+                "country": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/create-shop": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "example": "any"
+                },
+                "bio": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "address": {
+                  "example": "any"
+                },
+                "opening_hours": {
+                  "example": "any"
+                },
+                "website": {
+                  "example": "any"
+                },
+                "sellerId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
     }
   }
 }
