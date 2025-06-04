@@ -1,5 +1,6 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
+import StripeLogo from "apps/seller-ui/src/assets/svgs/Stripe-Logo";
 import CreateShop from "apps/seller-ui/src/shared/modules/auth/create-shop";
 import { countries } from "apps/seller-ui/src/utils/countries";
 import axios, { AxiosError } from "axios";
@@ -19,7 +20,7 @@ type FormData = {
 
 const Signup = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [activeStep, setActiveStep] = useState(2);
+  const [activeStep, setActiveStep] = useState(3);
   const [showOtp, setShowOtp] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [timer, setTimer] = useState(60);
@@ -112,6 +113,20 @@ const Signup = () => {
   const resendOtp = () => {
     if (sellerData) {
       signupMutation.mutate(sellerData);
+    }
+  };
+
+  const ConnectStripe = async () => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URI}/api/create-stripe-link`,
+        { sellerId }
+      );
+      if (response.data.url) {
+        window.location.href = response.data.url;
+      }
+    } catch (error) {
+      console.log("Stripe Connection Error", error);
     }
   };
 
@@ -327,7 +342,21 @@ const Signup = () => {
             )}
           </>
         )}
-        {activeStep === 2 && <CreateShop sellerId={sellerId} setActiveStep={setActiveStep} />}
+        {activeStep === 2 && (
+          <CreateShop sellerId={sellerId} setActiveStep={setActiveStep} />
+        )}
+        {activeStep === 3 && (
+          <div className="text-center">
+            <h3 className="text-2xl font-semibold">Withdraw Method</h3>
+            <br />
+            <button
+              onClick={ConnectStripe}
+              className="w-full m-auto flex items-center justify-center gap-3 text-lg bg-[#334155] text-white py-2 rounded-lg cursor-pointer"
+            >
+              Connect Stripe <StripeLogo />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
