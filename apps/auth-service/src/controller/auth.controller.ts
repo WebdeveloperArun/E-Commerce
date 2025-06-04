@@ -13,6 +13,11 @@ import { AuthenticationError, ValidationError } from "@packages/error-handler";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { setCookie } from "../utils/cookies/setCookie";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-05-28.basil",
+});
 
 // Register a new user
 export const userRegistration = async (
@@ -330,7 +335,8 @@ export const createShop = async (
   next: NextFunction
 ) => {
   try {
-    const {name, bio, category, address, opening_hours, website, sellerId} = req.body;
+    const { name, bio, category, address, opening_hours, website, sellerId } =
+      req.body;
 
     if (!name || !bio || !category || !address || !opening_hours || !sellerId) {
       return next(new ValidationError("All fields are required!"));
@@ -354,8 +360,54 @@ export const createShop = async (
     });
 
     res.status(201).json({ success: true, shop });
-
   } catch (error) {
     return next(error);
+  }
+};
+
+// Create Stripe url
+export const createStripeConnectLink = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { sellerId } = req.body;
+
+    if (!sellerId) {
+      return next(new ValidationError("Seller Id is required!"));
+    }
+
+    const seller = await prisma.sellers.findUnique({ where: { id: sellerId } });
+
+    if (!seller) {
+      return next(new ValidationError("Seller is not available with this id!"));
+    }
+
+    const account = await stripe.accounts.create({
+      type: "express",
+      email: seller?.email,
+      country: "GB",
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
+
+    await prisma.sellers.update({
+      where: { id: sellerId },
+      data: { stripeId: account.id },
+    });
+
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: "http://localhost:3000/success",
+      return_url: "http://localhost:3000/success",
+      type: "account_onboarding",
+    });
+
+    return res.status(201).json({ success: true, url: accountLink.url });
+  } catch (error) {
+    return next(error); 
   }
 };
