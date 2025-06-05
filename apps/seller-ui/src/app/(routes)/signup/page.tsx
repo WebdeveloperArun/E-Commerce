@@ -1,5 +1,6 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
+import CreateShop from "apps/seller-ui/src/shared/modules/auth/create-shop";
 import { countries } from "apps/seller-ui/src/utils/countries";
 import axios, { AxiosError } from "axios";
 import { Eye, EyeOff } from "lucide-react";
@@ -24,9 +25,8 @@ const Signup = () => {
   const [timer, setTimer] = useState(60);
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [sellerData, setSellerData] = useState<FormData | null>(null);
-  const [sellerId, setSellerId] = useState("")
+  const [sellerId, setSellerId] = useState("");
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
 
   const router = useRouter();
 
@@ -79,7 +79,7 @@ const Signup = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      setSellerId(data?.seller?.id)
+      setSellerId(data?.seller?.id);
       setActiveStep(2);
     },
   });
@@ -269,10 +269,12 @@ const Signup = () => {
                         signupMutation.error.message}
                     </p>
                   )}
-                  <p className="pt-3 text-center">
-                    Already have an account?{" "}
-                    <Link href="/login" className="text-blue-500">Login</Link>
-                  </p>
+                <p className="pt-3 text-center">
+                  Already have an account?{" "}
+                  <Link href="/login" className="text-blue-500">
+                    Login
+                  </Link>
+                </p>
               </form>
             ) : (
               <div>
@@ -325,6 +327,7 @@ const Signup = () => {
             )}
           </>
         )}
+        {activeStep === 2 && <CreateShop sellerId={sellerId} setActiveStep={setActiveStep} />}
       </div>
     </div>
   );

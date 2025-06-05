@@ -7,6 +7,7 @@ out-tsc
 
 # dependencies
 node_modules
+.env
 
 # IDEs and editors
 /.idea
@@ -45,4 +46,4 @@ test-output
 
 # Next.js
 .next
-out
+out.env
