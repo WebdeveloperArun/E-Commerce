@@ -310,7 +310,7 @@ export const verifySeller = async (
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await prisma.sellers.create({
+    const seller = await prisma.sellers.create({
       data: {
         name,
         email,
@@ -322,7 +322,7 @@ export const verifySeller = async (
 
     res
       .status(201)
-      .json({ success: true, message: "Seller registered successfully." });
+      .json({ success: true, message: "Seller registered successfully.", seller});
   } catch (error) {
     return next(error);
   }

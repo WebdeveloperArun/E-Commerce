@@ -4,7 +4,15 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { shopCategories } from "apps/seller-ui/src/utils/categories";
 
-type formData = any;
+type formData = {
+  name: string;
+  category: string;
+  bio: string;
+  address: string;
+  opening_hours: string;
+  website: string;
+  sellerId: string;
+};
 
 const CreateShop = ({
   sellerId,
@@ -17,10 +25,10 @@ const CreateShop = ({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<any>();
+  } = useForm<formData>();
 
   const shopCreateMutation = useMutation({
-    mutationFn: async (data: FormData) => {
+    mutationFn: async (data: formData) => {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_SERVER_URI}/api/create-shop`,
         data
@@ -32,7 +40,7 @@ const CreateShop = ({
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = (data: formData) => {
     const shopData = { ...data, sellerId };
     shopCreateMutation.mutate(shopData);
   };

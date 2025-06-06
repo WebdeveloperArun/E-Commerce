@@ -1,6 +1,6 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
-import StripeLogo from "apps/seller-ui/src/assets/svgs/Stripe-Logo";
+import StripeLogo from "apps/seller-ui/src/assets/svgs/stripe-logo";
 import CreateShop from "apps/seller-ui/src/shared/modules/auth/create-shop";
 import { countries } from "apps/seller-ui/src/utils/countries";
 import axios, { AxiosError } from "axios";
@@ -20,7 +20,7 @@ type FormData = {
 
 const Signup = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [activeStep, setActiveStep] = useState(3);
+  const [activeStep, setActiveStep] = useState(1);
   const [showOtp, setShowOtp] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [timer, setTimer] = useState(60);
