@@ -159,12 +159,24 @@ export const varifyForgotPasswordOtp = async (
 
     await verifyOtp(email, otp, next);
 
-    res
-      .status(200)
-      .json({
-        message: "OTP verified successfully! you can reset your password!",
-      });
+    res.status(200).json({
+      message: "OTP verified successfully! you can reset your password!",
+    });
   } catch (error) {
     next(error);
   }
+};
+
+export const parseAddress = (fullAddress: string) => {
+  const [street1 = "", city = "", state = "", postal_code = ""] = fullAddress
+    .split(",")
+    .map((part) => part.trim());
+
+  return {
+    street1,
+    city,
+    state,
+    postal_code,
+    country: "IN",
+  };
 };

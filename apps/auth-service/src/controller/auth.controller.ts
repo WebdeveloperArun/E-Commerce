@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import {
   checkOtpRestrictions,
   handleForgotPassword,
+  parseAddress,
   sendOtp,
   trackOtpRequests,
   validateRegistrationData,
@@ -13,10 +14,11 @@ import { AuthenticationError, ValidationError } from "@packages/error-handler";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { setCookie } from "../utils/cookies/setCookie";
-import Stripe from "stripe";
+import Razorpay from "razorpay";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-05-28.basil",
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 // Register a new user
@@ -320,9 +322,11 @@ export const verifySeller = async (
       },
     });
 
-    res
-      .status(201)
-      .json({ success: true, message: "Seller registered successfully.", seller});
+    res.status(201).json({
+      success: true,
+      message: "Seller registered successfully.",
+      seller,
+    });
   } catch (error) {
     return next(error);
   }
@@ -365,48 +369,89 @@ export const createShop = async (
   }
 };
 
-// Create Stripe url
-export const createStripeConnectLink = async (
+// Connect razorpay
+export const connectRazorpay = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { sellerId } = req.body;
+    const {
+      sellerId,
+      pan,
+      account_number,
+      ifsc,
+      business_name,
+      business_type,
+      category,
+    } = req.body;
 
-    if (!sellerId) {
-      return next(new ValidationError("Seller Id is required!"));
-    }
+    // 1. Fetch seller & shop
+    const seller = await prisma.sellers.findUnique({
+      where: { id: sellerId },
+      include: { shop: true },
+    });
 
-    const seller = await prisma.sellers.findUnique({ where: { id: sellerId } });
+    if (!seller) return next(new ValidationError("Seller not found!"));
+    if (!seller.shop) return next(new ValidationError("Shop not found!"));
 
-    if (!seller) {
-      return next(new ValidationError("Seller is not available with this id!"));
-    }
+    const { email, phone_number, name } = seller;
+    const { street1, city, state, postal_code, country } = parseAddress(
+      seller.shop.address
+    );
 
-    const account = await stripe.accounts.create({
-      type: "express",
-      email: seller?.email,
-      country: "GB",
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
+    // 2. Create Razorpay linked account
+    const razorpayAccount = await razorpay.accounts.create({
+      email,
+      phone: phone_number,
+      legal_business_name: name,
+      business_type,
+      customer_facing_business_name: business_name || seller.shop.name,
+      profile: {
+        category,
+        subcategory: "Online Retail", // You can also make this dynamic
+        addresses: {
+          registered: {
+            street1,
+            street2: "None",
+            city,
+            state,
+            postal_code,
+            country,
+          },
+        },
+      },
+      legal_info: { pan },
+      contact_name: name,
+    });
+
+    if (!razorpayAccount) return next(new ValidationError("Razorpay error!"));
+    const fundAccount = await razorpay.fundAccount.create({
+      customer_id: razorpayAccount.id,
+      account_type: "bank_account",
+      bank_account: {
+        name,
+        account_number,
+        ifsc,
+      },
+    });
+    if (!fundAccount)
+      return next(new ValidationError("Razorpay error! fund account"));
+
+    // 3. Save razorpayId
+    await prisma.sellers.update({
+      where: { id: sellerId },
+      data: {
+        razorpayId: razorpayAccount.id,
+        fundAccountId: fundAccount.id,
       },
     });
 
-    await prisma.sellers.update({
-      where: { id: sellerId },
-      data: { stripeId: account.id },
+    res.status(201).json({
+      success: true,
+      razorpayId: razorpayAccount.id,
+      fundAccountId: fundAccount.id,
     });
-
-    const accountLink = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: "http://localhost:3000/success",
-      return_url: "http://localhost:3000/success",
-      type: "account_onboarding",
-    });
-
-    return res.status(201).json({ success: true, url: accountLink.url });
   } catch (error) {
     return next(error);
   }
@@ -452,20 +497,22 @@ export const loginSeller = async (
     setCookie(res, "seller-access-token", accessToken);
     setCookie(res, "seller-refresh-token", refreshToken);
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Seller logged in successfully.",
-        seller: { id: seller.id, email: seller.email, name: seller.name },
-      });
+    res.status(201).json({
+      success: true,
+      message: "Seller logged in successfully.",
+      seller: { id: seller.id, email: seller.email, name: seller.name },
+    });
   } catch (error) {
     return next(error);
   }
 };
 
 // Get seller
-export const getSeller = async (req: any, res: Response, next: NextFunction) => {
+export const getSeller = async (
+  req: any,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const seller = req.seller;
 
@@ -473,4 +520,4 @@ export const getSeller = async (req: any, res: Response, next: NextFunction) => 
   } catch (error) {
     return next(error);
   }
-}
+};
