@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import {
   checkOtpRestrictions,
   handleForgotPassword,
-  parseAddress,
   sendOtp,
   trackOtpRequests,
   validateRegistrationData,
@@ -14,12 +13,10 @@ import { AuthenticationError, ValidationError } from "@packages/error-handler";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { setCookie } from "../utils/cookies/setCookie";
-import Razorpay from "razorpay";
+import axios from "axios";
+import dotenv from "dotenv";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+dotenv.config();
 
 // Register a new user
 export const userRegistration = async (
@@ -379,14 +376,31 @@ export const connectRazorpay = async (
     const {
       sellerId,
       pan,
+      gst,
       account_number,
       ifsc,
       business_name,
       business_type,
       category,
+      subcategory,
+      fullAddress,
     } = req.body;
 
-    // 1. Fetch seller & shop
+    if (
+      !sellerId ||
+      !pan ||
+      !gst ||
+      !account_number ||
+      !ifsc ||
+      !business_name ||
+      !business_type ||
+      !category ||
+      !subcategory ||
+      !fullAddress
+    ) {
+      return next(new ValidationError("Missing required fields"));
+    }
+
     const seller = await prisma.sellers.findUnique({
       where: { id: sellerId },
       include: { shop: true },
@@ -396,64 +410,69 @@ export const connectRazorpay = async (
     if (!seller.shop) return next(new ValidationError("Shop not found!"));
 
     const { email, phone_number, name } = seller;
-    const { street1, city, state, postal_code, country } = parseAddress(
-      seller.shop.address
-    );
+    const { street1, street2, city, state, postal_code, country } = fullAddress;
 
-    // 2. Create Razorpay linked account
-    const razorpayAccount = await razorpay.accounts.create({
+    const formattedPhone = phone_number
+      ? String(phone_number).replace(/\D/g, "").slice(0, 10)
+      : "9876543210";
+
+    const payload = {
       email,
-      phone: phone_number,
-      legal_business_name: name,
-      business_type,
-      customer_facing_business_name: business_name || seller.shop.name,
+      phone: formattedPhone,
+      type: "route",
+      reference_id: `ven_${sellerId}_${Date.now()}`,
+      legal_business_name: business_name,
+      business_type: business_type.toLowerCase(),
+      contact_name: name,
       profile: {
-        category,
-        subcategory: "Online Retail", // You can also make this dynamic
+        category: category.toLowerCase(),
+        subcategory: subcategory.toLowerCase(),
         addresses: {
           registered: {
-            street1,
-            street2: "None",
-            city,
-            state,
-            postal_code,
-            country,
+            street1: street1 || "No Street1",
+            street2: street2 || "No Street2",
+            city: city || "No City",
+            state: state || "No State",
+            postal_code: postal_code || "000000",
+            country: country || "No Country",
           },
         },
       },
-      legal_info: { pan },
-      contact_name: name,
-    });
-
-    if (!razorpayAccount) return next(new ValidationError("Razorpay error!"));
-    const fundAccount = await razorpay.fundAccount.create({
-      customer_id: razorpayAccount.id,
-      account_type: "bank_account",
-      bank_account: {
-        name,
-        account_number,
-        ifsc,
+      legal_info: {
+        pan: pan.toUpperCase(),
+        gst: gst.toUpperCase(),
       },
-    });
-    if (!fundAccount)
-      return next(new ValidationError("Razorpay error! fund account"));
+    };
 
-    // 3. Save razorpayId
+    const razorpayAccount = await axios.post(
+      "https://api.razorpay.com/v2/accounts",
+      payload,
+      {
+        auth: {
+          username: process.env.RAZORPAY_KEY_ID!,
+          password: process.env.RAZORPAY_KEY_SECRET!,
+        },
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000,
+      }
+    );
+    if (!razorpayAccount) return next(new AuthenticationError("Cannot connect account with razorpay!"))
+
     await prisma.sellers.update({
       where: { id: sellerId },
-      data: {
-        razorpayId: razorpayAccount.id,
-        fundAccountId: fundAccount.id,
-      },
+      data: { razorpayId: razorpayAccount.data.id },
     });
 
     res.status(201).json({
       success: true,
-      razorpayId: razorpayAccount.id,
-      fundAccountId: fundAccount.id,
+      razorpayId: razorpayAccount.data.id,
     });
-  } catch (error) {
-    return next(error);
+  } catch (error: any) {
+    console.error(
+      "Razorpay connection error:",
+      error.response?.data || error.message
+    );
+    next(error);
   }
 };
 

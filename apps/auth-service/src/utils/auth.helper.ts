@@ -5,6 +5,7 @@ import redis from "../../../../packages/libs/redis";
 import { sendEmail } from "./sendMail";
 import prisma from "@packages/libs/prisma";
 
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const validateRegistrationData = (
@@ -165,18 +166,4 @@ export const varifyForgotPasswordOtp = async (
   } catch (error) {
     next(error);
   }
-};
-
-export const parseAddress = (fullAddress: string) => {
-  const [street1 = "", city = "", state = "", postal_code = ""] = fullAddress
-    .split(",")
-    .map((part) => part.trim());
-
-  return {
-    street1,
-    city,
-    state,
-    postal_code,
-    country: "IN",
-  };
 };
