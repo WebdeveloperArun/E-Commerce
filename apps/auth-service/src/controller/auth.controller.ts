@@ -15,6 +15,7 @@ import jwt from "jsonwebtoken";
 import { setCookie } from "../utils/cookies/setCookie";
 import axios from "axios";
 import dotenv from "dotenv";
+import { sign } from "crypto";
 
 dotenv.config();
 
@@ -375,28 +376,26 @@ export const connectRazorpay = async (
   try {
     const {
       sellerId,
-      pan,
-      gst,
-      account_number,
-      ifsc,
+      // pan,
+      // gst,
+      // account_number,
+      // ifsc,
       business_name,
       business_type,
-      category,
-      subcategory,
-      fullAddress,
+      // category,
+      // subcategory,
     } = req.body;
 
     if (
       !sellerId ||
-      !pan ||
-      !gst ||
-      !account_number ||
-      !ifsc ||
+      // !pan ||
+      // !gst ||
+      // !account_number ||
+      // !ifsc ||
       !business_name ||
-      !business_type ||
-      !category ||
-      !subcategory ||
-      !fullAddress
+      !business_type
+      // !category ||
+      // !subcategory
     ) {
       return next(new ValidationError("Missing required fields"));
     }
@@ -410,69 +409,95 @@ export const connectRazorpay = async (
     if (!seller.shop) return next(new ValidationError("Shop not found!"));
 
     const { email, phone_number, name } = seller;
-    const { street1, street2, city, state, postal_code, country } = fullAddress;
+    // const { street1, street2, city, state, postal_code, country } = seller.shop
+    //   .address as {
+    //   street1: string;
+    //   street2?: string;
+    //   city: string;
+    //   state: string;
+    //   postal_code: string;
+    //   country: string;
+    // };
 
     const formattedPhone = phone_number
       ? String(phone_number).replace(/\D/g, "").slice(0, 10)
       : "9876543210";
 
     const payload = {
-      email,
-      phone: formattedPhone,
-      type: "route",
-      reference_id: `ven_${sellerId}_${Date.now()}`,
-      legal_business_name: business_name,
-      business_type: business_type.toLowerCase(),
-      contact_name: name,
-      profile: {
-        category: category.toLowerCase(),
-        subcategory: subcategory.toLowerCase(),
-        addresses: {
-          registered: {
-            street1: street1 || "No Street1",
-            street2: street2 || "No Street2",
-            city: city || "No City",
-            state: state || "No State",
-            postal_code: postal_code || "000000",
-            country: country || "No Country",
-          },
-        },
+      merchant_id: Date.now().toString(),
+      merchant_email: email,
+      merchant_name: name,
+      poc_phone: formattedPhone,
+      merchant_site_url: seller.shop.website,
+      business_details: {
+        business_legal_name: business_name,
+        business_type: business_type,
+        business_model: "Both",
       },
-      legal_info: {
-        pan: pan.toUpperCase(),
-        gst: gst.toUpperCase(),
+      signatory_details: {
+        signatory_name: name,
       },
     };
 
+    console.log("payload", payload);
+
     const razorpayAccount = await axios.post(
-      "https://api.razorpay.com/v2/accounts",
+      "https://api-sandbox.cashfree.com/partners/merchants",
       payload,
       {
-        auth: {
-          username: process.env.RAZORPAY_KEY_ID!,
-          password: process.env.RAZORPAY_KEY_SECRET!,
+        headers: {
+          "x-partner-apikey": `${process.env.CASHFREE_API_KEY}`,
+          "Content-Type": "application/json",
         },
-        headers: { "Content-Type": "application/json" },
-        timeout: 10000,
       }
     );
-    if (!razorpayAccount) return next(new AuthenticationError("Cannot connect account with razorpay!"))
+    if (!razorpayAccount)
+      return next(
+        new AuthenticationError("Cannot connect account with cashfree!")
+      );
 
-    await prisma.sellers.update({
-      where: { id: sellerId },
-      data: { razorpayId: razorpayAccount.data.id },
-    });
+    console.log("razorpayAccount", razorpayAccount.data);
 
-    res.status(201).json({
-      success: true,
-      razorpayId: razorpayAccount.data.id,
-    });
+    const createOnboardingUrl = await axios.post(
+      `https://api-sandbox.cashfree.com/partners/merchants/${razorpayAccount.data.merchant_id}/onboarding_link`,
+      {
+        type: "account_onboarding",
+        return_url: "http://localhost:3000/dashboard",
+      },
+      {
+        headers: {
+          "x-partner-apikey": `${process.env.CASHFREE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!createOnboardingUrl)
+      return next(
+        new AuthenticationError("Cannot connect account with cashfree!")
+      );
+
+      console.log("createOnboardingUrl", createOnboardingUrl.data);
+      
+
+     
+
+    // await prisma.sellers.update({
+    //   where: { id: sellerId },
+    //   data: { razorpayId: razorpayAccount.data.id },
+    // });
+
+    res
+      .status(201)
+      .json({ redirect_url: createOnboardingUrl.data.onboarding_link });
   } catch (error: any) {
     console.error(
       "Razorpay connection error:",
       error.response?.data || error.message
     );
-    next(error);
+    // console.log(error.response);
+
+    return next(error.response);
   }
 };
 
