@@ -15,7 +15,6 @@ import jwt from "jsonwebtoken";
 import { setCookie } from "../utils/cookies/setCookie";
 import axios from "axios";
 import dotenv from "dotenv";
-import { sign } from "crypto";
 
 dotenv.config();
 
@@ -110,6 +109,9 @@ export const loginUser = async (
     if (!isPasswordValid) {
       return next(new AuthenticationError("Invalid password!"));
     }
+    
+    res.clearCookie("seller-access-token");
+    res.clearCookie("seller-refresh-token");
 
     // generate access and varification token
     const accessToken = jwt.sign(
@@ -146,7 +148,7 @@ export const loginUser = async (
 
 // Refresh token user
 export const refreshToken = async (
-  req: Request,
+  req: any,
   res: Response,
   next: NextFunction
 ) => {
@@ -196,6 +198,9 @@ export const refreshToken = async (
     } else if (decoded.role === "seller") {
       setCookie(res, "seller-access-token", newAccessToken);
     }
+
+    req.role = decoded.role;
+
 
     res.status(201).json({ success: true });
   } catch (error) {
@@ -527,6 +532,9 @@ export const loginSeller = async (
     if (!isMatch) {
       return next(new ValidationError("Invalid password!"));
     }
+
+    res.clearCookie("access_token")
+    res.clearCookie("refresh_token")
 
     // generate access and varification token
     const accessToken = jwt.sign(

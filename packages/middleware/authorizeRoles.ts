@@ -1,5 +1,5 @@
 import { AuthenticationError } from "@packages/error-handler";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 
 export const isSeller = (req: any, res: Response, next: NextFunction) => {
   if (req.role !== "seller") {
