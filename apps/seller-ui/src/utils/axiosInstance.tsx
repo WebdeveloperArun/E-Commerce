@@ -59,10 +59,8 @@ axiosInstance.interceptors.response.use(
         onRefreshSuccess();
 
         return axiosInstance(originalRequest);
-
       } catch (error) {
-        isRefreshing = false,
-        refreshSubscribers = [];
+        (isRefreshing = false), (refreshSubscribers = []);
         handleLogout();
         return Promise.reject(error);
       }

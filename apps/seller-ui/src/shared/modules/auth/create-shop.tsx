@@ -2,11 +2,15 @@ import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import React from "react";
 import { useForm } from "react-hook-form";
-import { shopCategories } from "apps/seller-ui/src/utils/categories";
+import {
+  businessType,
+  shopCategories,
+} from "apps/seller-ui/src/utils/categories";
 
 type FormData = {
   name: string;
-  category: string;
+  business_name: string;
+  business_type: string;
   bio: string;
   street1: string;
   street2?: string;
@@ -37,7 +41,8 @@ const CreateShop = ({
         `${process.env.NEXT_PUBLIC_SERVER_URI}/api/create-shop`,
         {
           name: data.name,
-          category: data.category,
+          business_name: data.business_name,
+          business_type: data.business_type,
           bio: data.bio,
           opening_hours: data.opening_hours,
           website: data.website,
@@ -141,23 +146,40 @@ const CreateShop = ({
               </p>
             )}
 
+            <label className="text-gray-700 mb-1 block">Business Name *</label>
+            <input
+              type="text"
+              placeholder="business name"
+              className="w-full p-2 border border-gray-300 outline-0 !rounded mb-1"
+              {...register("business_name", {
+                required: "business name is required",
+              })}
+            />
+            {errors.business_name && (
+              <p className="text-red-500 text-sm">
+                {String(errors.business_name.message)}
+              </p>
+            )}
+
             <label className="text-gray-700 mb-1 block">
-              Shop Categories *
+              Businnes Categories *
             </label>
             <select
               className="w-full p-2 border border-gray-300 outline-0 rounded-[4px] mb-1"
-              {...register("category", { required: "Category is required" })}
+              {...register("business_type", {
+                required: "business type is required",
+              })}
             >
               <option value="">Select Category</option>
-              {shopCategories.map((category) => (
+              {businessType.map((category) => (
                 <option key={category.value} value={category.value}>
                   {category.label}
                 </option>
               ))}
             </select>
-            {errors.category && (
+            {errors.business_type && (
               <p className="text-red-500 text-sm">
-                {String(errors.category.message)}
+                {String(errors.business_type.message)}
               </p>
             )}
           </div>

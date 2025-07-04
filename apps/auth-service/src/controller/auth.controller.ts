@@ -151,7 +151,10 @@ export const refreshToken = async (
   next: NextFunction
 ) => {
   try {
-    const refreshToken = req.cookies.refresh_token;
+    const refreshToken =
+      req.cookies["refresh_token"] ||
+      req.cookies["seller-refresh-token"] ||
+      req.headers.authorization?.split(" ")[1];
 
     if (!refreshToken) {
       return next(new ValidationError("Unauthorized! No refresh token."));
@@ -166,21 +169,33 @@ export const refreshToken = async (
       return next(new AuthenticationError("Forbidden! Invalid refresh token."));
     }
 
-    const user = await prisma.users.findUnique({ where: { id: decoded.id } });
+    let account;
+    if (decoded.role === "user") {
+      account = await prisma.users.findUnique({ where: { id: decoded.id } });
+    } else if (decoded.role === "seller") {
+      account = await prisma.sellers.findUnique({
+        where: { id: decoded.id },
+        include: { shop: true },
+      });
+    }
 
-    if (!user) {
-      return next(new AuthenticationError("Forbidden! Invalid refresh token."));
+    if (!account) {
+      return next(new AuthenticationError("Forbidden! User/Seller not found!"));
     }
 
     const newAccessToken = jwt.sign(
-      { id: user.id, role: decoded.role ?? "user" },
+      { id: decoded.id, role: decoded.role },
       process.env.ACCESS_TOKEN_SECRET as string,
       {
         expiresIn: "15m",
       }
     );
 
-    setCookie(res, "access_token", newAccessToken);
+    if (decoded.role === "user") {
+      setCookie(res, "access_token", newAccessToken);
+    } else if (decoded.role === "seller") {
+      setCookie(res, "seller-access-token", newAccessToken);
+    }
 
     res.status(201).json({ success: true });
   } catch (error) {
@@ -298,7 +313,9 @@ export const verifySeller = async (
       return next(new ValidationError("All fields are required!"));
     }
 
-    const existingSeller = await prisma.users.findUnique({ where: { email } });
+    const existingSeller = await prisma.sellers.findUnique({
+      where: { email },
+    });
 
     if (existingSeller) {
       return next(
@@ -337,17 +354,34 @@ export const createShop = async (
   next: NextFunction
 ) => {
   try {
-    const { name, bio, category, address, opening_hours, website, sellerId } =
-      req.body;
+    const {
+      name,
+      bio,
+      business_name,
+      business_type,
+      address,
+      opening_hours,
+      website,
+      sellerId,
+    } = req.body;
 
-    if (!name || !bio || !category || !address || !opening_hours || !sellerId) {
+    if (
+      !name ||
+      !bio ||
+      !business_name ||
+      !business_type ||
+      !address ||
+      !opening_hours ||
+      !sellerId
+    ) {
       return next(new ValidationError("All fields are required!"));
     }
 
     const shopData: any = {
       name,
       bio,
-      category,
+      business_name,
+      business_type,
       address,
       opening_hours,
       sellerId,
@@ -374,29 +408,9 @@ export const connectRazorpay = async (
   next: NextFunction
 ) => {
   try {
-    const {
-      sellerId,
-      // pan,
-      // gst,
-      // account_number,
-      // ifsc,
-      business_name,
-      business_type,
-      // category,
-      // subcategory,
-    } = req.body;
+    const { sellerId } = req.body;
 
-    if (
-      !sellerId ||
-      // !pan ||
-      // !gst ||
-      // !account_number ||
-      // !ifsc ||
-      !business_name ||
-      !business_type
-      // !category ||
-      // !subcategory
-    ) {
+    if (!sellerId) {
       return next(new ValidationError("Missing required fields"));
     }
 
@@ -409,15 +423,6 @@ export const connectRazorpay = async (
     if (!seller.shop) return next(new ValidationError("Shop not found!"));
 
     const { email, phone_number, name } = seller;
-    // const { street1, street2, city, state, postal_code, country } = seller.shop
-    //   .address as {
-    //   street1: string;
-    //   street2?: string;
-    //   city: string;
-    //   state: string;
-    //   postal_code: string;
-    //   country: string;
-    // };
 
     const formattedPhone = phone_number
       ? String(phone_number).replace(/\D/g, "").slice(0, 10)
@@ -430,8 +435,8 @@ export const connectRazorpay = async (
       poc_phone: formattedPhone,
       merchant_site_url: seller.shop.website,
       business_details: {
-        business_legal_name: business_name,
-        business_type: business_type,
+        business_legal_name: seller.shop.business_name,
+        business_type: seller.shop.business_type,
         business_model: "Both",
       },
       signatory_details: {
@@ -458,11 +463,16 @@ export const connectRazorpay = async (
 
     console.log("razorpayAccount", razorpayAccount.data);
 
+    await prisma.sellers.update({
+      where: { id: sellerId },
+      data: { cashfreeId: razorpayAccount.data.merchant_id },
+    });
+
     const createOnboardingUrl = await axios.post(
-      `https://api-sandbox.cashfree.com/partners/merchants/${razorpayAccount.data.merchant_id}/onboarding_link`,
+      `https://api-sandbox.cashfree.com/partners/merchants/${razorpayAccount.data.merchant_id}/onboarding_link/standard`,
       {
         type: "account_onboarding",
-        return_url: "http://localhost:3000/dashboard",
+        return_url: "http://localhost:3000/success",
       },
       {
         headers: {
@@ -477,15 +487,7 @@ export const connectRazorpay = async (
         new AuthenticationError("Cannot connect account with cashfree!")
       );
 
-      console.log("createOnboardingUrl", createOnboardingUrl.data);
-      
-
-     
-
-    // await prisma.sellers.update({
-    //   where: { id: sellerId },
-    //   data: { razorpayId: razorpayAccount.data.id },
-    // });
+    console.log("createOnboardingUrl", createOnboardingUrl.data);
 
     res
       .status(201)

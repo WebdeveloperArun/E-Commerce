@@ -45,7 +45,8 @@ model shops {
   id            String        @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   bio           String?
-  category      String
+  business_name String
+  business_type String
   avatar        images?
   coverBanner   String?
   address       Json
@@ -67,7 +68,7 @@ model sellers {
   phone_number String
   country      String
   password     String
-  razorpayId   String?
+  cashfreeId   String?
   shop         shops?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
