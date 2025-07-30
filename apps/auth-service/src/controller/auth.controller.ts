@@ -13,10 +13,14 @@ import { AuthenticationError, ValidationError } from "@packages/error-handler";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { setCookie } from "../utils/cookies/setCookie";
-import axios from "axios";
+import Stripe from "stripe";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-05-28.basil",
+});
 
 // Register a new user
 export const userRegistration = async (
@@ -109,7 +113,7 @@ export const loginUser = async (
     if (!isPasswordValid) {
       return next(new AuthenticationError("Invalid password!"));
     }
-    
+
     res.clearCookie("seller-access-token");
     res.clearCookie("seller-refresh-token");
 
@@ -200,7 +204,6 @@ export const refreshToken = async (
     }
 
     req.role = decoded.role;
-
 
     res.status(201).json({ success: true });
   } catch (error) {
@@ -407,99 +410,51 @@ export const createShop = async (
 };
 
 // Connect razorpay
-export const connectRazorpay = async (
+export const connectStripe = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { sellerId } = req.body;
-
     if (!sellerId) {
-      return next(new ValidationError("Missing required fields"));
+      return next(new ValidationError("Seller id is required!"));
     }
 
     const seller = await prisma.sellers.findUnique({
       where: { id: sellerId },
-      include: { shop: true },
     });
 
-    if (!seller) return next(new ValidationError("Seller not found!"));
-    if (!seller.shop) return next(new ValidationError("Shop not found!"));
+    if (!seller) {
+      return next(new ValidationError("Seller is not available with this id!"));
+    }
 
-    const { email, phone_number, name } = seller;
-
-    const formattedPhone = phone_number
-      ? String(phone_number).replace(/\D/g, "").slice(0, 10)
-      : "9876543210";
-
-    const payload = {
-      merchant_id: Date.now().toString(),
-      merchant_email: email,
-      merchant_name: name,
-      poc_phone: formattedPhone,
-      merchant_site_url: seller.shop.website,
-      business_details: {
-        business_legal_name: seller.shop.business_name,
-        business_type: seller.shop.business_type,
-        business_model: "Both",
+    const account = await stripe.accounts.create({
+      type: "express",
+      email: seller?.email,
+      country: "GB",
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
       },
-      signatory_details: {
-        signatory_name: name,
-      },
-    };
-
-    console.log("payload", payload);
-
-    const razorpayAccount = await axios.post(
-      "https://api-sandbox.cashfree.com/partners/merchants",
-      payload,
-      {
-        headers: {
-          "x-partner-apikey": `${process.env.CASHFREE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    if (!razorpayAccount)
-      return next(
-        new AuthenticationError("Cannot connect account with cashfree!")
-      );
-
-    console.log("razorpayAccount", razorpayAccount.data);
+    });
 
     await prisma.sellers.update({
       where: { id: sellerId },
-      data: { cashfreeId: razorpayAccount.data.merchant_id },
+      data: { stripeId: account.id },
     });
 
-    const createOnboardingUrl = await axios.post(
-      `https://api-sandbox.cashfree.com/partners/merchants/${razorpayAccount.data.merchant_id}/onboarding_link/standard`,
-      {
-        type: "account_onboarding",
-        return_url: "http://localhost:3000/success",
-      },
-      {
-        headers: {
-          "x-partner-apikey": `${process.env.CASHFREE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: "http://localhost:3000/success",
+      return_url: "http://localhost:3000/success",
+      type: "account_onboarding",
+    });
 
-    if (!createOnboardingUrl)
-      return next(
-        new AuthenticationError("Cannot connect account with cashfree!")
-      );
-
-    console.log("createOnboardingUrl", createOnboardingUrl.data);
-
-    res
-      .status(201)
-      .json({ redirect_url: createOnboardingUrl.data.onboarding_link });
+    return res.status(201).json({ success: true, url: accountLink.url });
   } catch (error: any) {
     console.error(
-      "Razorpay connection error:",
+      "Stripe connection error:",
       error.response?.data || error.message
     );
     // console.log(error.response);
@@ -533,8 +488,8 @@ export const loginSeller = async (
       return next(new ValidationError("Invalid password!"));
     }
 
-    res.clearCookie("access_token")
-    res.clearCookie("refresh_token")
+    res.clearCookie("access_token");
+    res.clearCookie("refresh_token");
 
     // generate access and varification token
     const accessToken = jwt.sign(

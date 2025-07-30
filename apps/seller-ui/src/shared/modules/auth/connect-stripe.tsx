@@ -3,19 +3,18 @@ import axios from "axios";
 import React from "react";
 
 
-const cashFree = ({
+const ConnectStripe = ({
   sellerId,
   setActiveStep,
 }: {
   sellerId: string;
   setActiveStep: (step: number) => void;
 }) => {
-
   const cashFree = useMutation({
     mutationFn: async () => {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_SERVER_URI}/api/connect-razorpay`,
-        {sellerId}
+        { sellerId }
       );
       return response.data;
     },
@@ -49,4 +48,4 @@ const cashFree = ({
   );
 };
 
-export default cashFree;
+export default ConnectStripe;

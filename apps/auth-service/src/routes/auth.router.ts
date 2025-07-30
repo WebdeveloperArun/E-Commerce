@@ -1,7 +1,7 @@
 import { Router } from "express";
 import express from "express";
 import {
-  connectRazorpay,
+  connectStripe,
   createShop,
   forgotPassword,
   getSeller,
@@ -32,7 +32,7 @@ router.post("/reset-password-user", resetPassword);
 router.post("/seller-registration", registerSeller);
 router.post("/verify-seller", verifySeller);
 router.post("/create-shop", createShop);
-router.post("/connect-razorpay", connectRazorpay);
+router.post("/create-stripe-link", connectStripe);
 router.post("/login-seller", loginSeller);
 router.get("/logged-in-seller", isAuthenticated, isSeller, getSeller);
 
